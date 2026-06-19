@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Diplomas - Ministerio de Cultura y Deportes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #1F2A6B;
+            --secondary: #233D91;
+            --accent: #00A9CE;
+            --light: #F5F7FA;
+        }
+        body { font-family: 'Open Sans', sans-serif; background: linear-gradient(135deg, #f0f2f5 0%, #e2e8f0 100%); color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+        
+        .container { max-width: 650px; width: 100%; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-top: 8px solid var(--primary); }
+        
+        /* Estilos de Galería */
+        .hidden { display: none !important; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .gallery-item { cursor: pointer; border-radius: 8px; overflow: hidden; height: 150px; border: 2px solid #ddd; transition: 0.3s; }
+        .gallery-item:hover { transform: scale(1.05); border-color: var(--accent); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Lightbox */
+        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .lightbox img { max-width: 90%; max-height: 70vh; border-radius: 8px; }
+        .lightbox-controls { margin-top: 20px; display: flex; gap: 15px; }
+
+        /* Estilos generales */
+        .header-logos { display: flex; justify-content: space-around; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--light); padding-bottom: 20px; }
+        .logo-placeholder { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        .logo-placeholder img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        h1 { font-family: 'Montserrat', sans-serif; color: var(--primary); font-size: 1.6rem; text-align: center; margin-bottom: 5px; }
+        p.subtitle { text-align: center; color: var(--secondary); font-size: 0.95rem; margin-bottom: 30px; font-weight: 600; }
+        
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 10px; font-weight: 600; color: #444; }
+        select, textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; }
+        
+        button { background: var(--primary); color: white; padding: 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.3s; margin-bottom: 12px; }
+        button:hover { background: var(--secondary); }
+        button.secondary-btn { background: var(--accent); }
+        
+        #mensaje-flotante { display: none; position: fixed; bottom: 30px; background: var(--primary); color: white; padding: 15px 30px; border-radius: 50px; opacity: 0; transition: opacity 0.5s; border: 2px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <!-- VISTA FORMULARIO -->
+    <div id="form-view" class="container">
+        <div class="header-logos">
+            <div class="logo-placeholder"><img src="gobierno.png" alt="Logo"></div>
+            <div class="logo-placeholder"><img src="mcd.png" alt="Logo"></div>
+            <div class="logo-placeholder"><img src="parque.png" alt="Logo"></div>
+        </div>
+        <h1>Centro de Servicios Académicos</h1>
+        <p class="subtitle">Parque de la Paz Kevin Cordón</p>
+
+        <div class="form-group">
+            <label>Participante:</label>
+            <select id="participante-select">
+                <option value="">Seleccione su nombre...</option>
+            </select>
+        </div>
+        <button onclick="descargarRecurso('diploma')">Descargar Diploma</button>
+        <button class="secondary-btn" onclick="descargarRecurso('presentacion')">Descargar Presentación (PDF)</button>
+        <button class="secondary-btn" onclick="irAGaleria()">Ver Galería Fotográfica</button>
+    </div>
+
+    <!-- VISTA GALERÍA -->
+    <div id="gallery-view" class="container hidden">
+        <h1>Galería Fotográfica</h1>
+        <button onclick="cerrarGaleria()" style="background:#666;">Volver al Inicio</button>
+        <div class="gallery-grid" id="grid-fotos"></div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="lightbox hidden">
+        <img id="lightbox-img" src="" alt="Foto">
+        <div class="lightbox-controls">
+            <a id="btn-download-img" href="#" download class="secondary-btn" style="padding: 10px 20px; text-decoration: none;">Descargar Foto</a>
+            <button onclick="cerrarLightbox()" style="background:#e53e3e; padding: 10px 20px;">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="mensaje-flotante">Operación realizada.</div>
+
+    <script>
+const participantes = [
+            { "id": "001", "nombre": "Ana Gabriela Lopez Aguilar", "archivo": "Ana Gabriela Lopez Aguilar.pdf" },
+            { "id": "002", "nombre": "Ariel Del Rocio Mendoza Vargas", "archivo": "Ariel Del Rocio Mendoza Vargas.pdf" },
+            { "id": "003", "nombre": "Beatriz Aldana", "archivo": "Beatriz Aldana.pdf" },
+            { "id": "004", "nombre": "Darly Guisela Muñoz García", "archivo": "Darly Guisela Muñoz García.pdf" },
+            { "id": "005", "nombre": "Delsy Jeaneth Lobos Guerra", "archivo": "Delsy Jeaneth Lobos Guerra.pdf" },
+            { "id": "006", "nombre": "Eliú Enrique López López", "archivo": "Eliú Enrique López López.pdf" },
+            { "id": "007", "nombre": "Elsa Yamileth Salguero Cruz", "archivo": "Elsa Yamileth Salguero Cruz.pdf" },
+            { "id": "008", "nombre": "Emely Monserrath Martinez Franco", "archivo": "Emely Monserrath Martinez Franco.pdf" },
+            { "id": "009", "nombre": "Emelyn Yaneth López Quintanilla", "archivo": "Emelyn Yaneth López Quintanilla.pdf" },
+            { "id": "010", "nombre": "Glenda Eunice Rios Lemus", "archivo": "Glenda Eunice Rios Lemus.pdf" },
+            { "id": "011", "nombre": "Ingrid Mayerling Alvarado Rocha", "archivo": "Ingrid Mayerling Alvarado Rocha.pdf" },
+            { "id": "012", "nombre": "Jakely Tobar", "archivo": "Jakely Tobar.pdf" },
+            { "id": "013", "nombre": "Jennifer Cecilia Ordoñez Solis", "archivo": "Jennifer Cecilia Ordoñez Solis.pdf" },
+            { "id": "014", "nombre": "Jessica Nineth Bolla Alvarado", "archivo": "Jessica Nineth Bolla Alvarado.pdf" },
+            { "id": "015", "nombre": "Jimmy Fernando Damian Zeceña", "archivo": "Jimmy Fernando Damian Zeceña.pdf" },
+            { "id": "016", "nombre": "José Antonio Culajay García", "archivo": "José Antonio Culajay García.pdf" },
+            { "id": "017", "nombre": "Karla Daniela González Cruz", "archivo": "Karla Daniela González Cruz.pdf" },
+            { "id": "018", "nombre": "Karolin Daniela Elizabeth Morales García", "archivo": "Karolin Daniela Elizabeth Morales García.pdf" },
+            { "id": "019", "nombre": "Kimberly Heidy Ralda Ruano", "archivo": "Kimberly Heidy Ralda Ruano.pdf" },
+            { "id": "020", "nombre": "Maria Angela Duarte", "archivo": "Maria Angela Duarte.pdf" },
+            { "id": "021", "nombre": "María Margarita Jacinto Ramos", "archivo": "María Margarita Jacinto Ramos.pdf" },
+            { "id": "022", "nombre": "Mayra de Jesús Alburéz", "archivo": "Mayra de Jesús Alburéz.pdf" },
+            { "id": "023", "nombre": "Miriam Xiomara Vasquez Valentin", "archivo": "Miriam Xiomara Vasquez Valentin.pdf" },
+            { "id": "024", "nombre": "Nancy Carolina Garcia y Garcia", "archivo": "Nancy Carolina Garcia y Garcia.pdf" },
+            { "id": "025", "nombre": "Stephanie Nahomy De la Cruz Urritia", "archivo": "Stephanie Nahomy De la Cruz Urritia.pdf" },
+            { "id": "026", "nombre": "Yenifer María Reynoso Guajaca", "archivo": "Yenifer María Reynoso Guajaca.pdf" },
+            { "id": "027", "nombre": "Yoselin Díaz", "archivo": "Yoselin Díaz.pdf" },
+            { "id": "028", "nombre": "Yoselyn Trinidad Diaz López", "archivo": "Yoselyn Trinidad Diaz López.pdf" },
+            { "id": "029", "nombre": "Yoshua Rafael Calderón Telón", "archivo": "Yoshua Rafael Calderón Telón.pdf" }
+        ];
+
+
+        // CONFIGURA TUS FOTOS AQUÍ
+        const listaFotos = ["foto1.jpg", "foto2.jpg", "foto3.jpg"]; 
+
+        // Inicialización
+        const select = document.getElementById('participante-select');
+        participantes.forEach(p => select.innerHTML += `<option value="${p.id}">${p.nombre}</option>`);
+
+        const grid = document.getElementById('grid-fotos');
+        listaFotos.forEach(f => {
+            grid.innerHTML += `<div class="gallery-item" onclick="abrirLightbox('fotos_evento/${f}')">
+                                    <img src="fotos_evento/${f}" alt="Evento">
+                               </div>`;
+        });
+
+        // Navegación
+        function irAGaleria() {
+            document.getElementById('form-view').classList.add('hidden');
+            document.getElementById('gallery-view').classList.remove('hidden');
+        }
+
+        function cerrarGaleria() {
+            document.getElementById('form-view').classList.remove('hidden');
+            document.getElementById('gallery-view').classList.add('hidden');
+        }
+
+        function abrirLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('btn-download-img').href = src;
+            document.getElementById('lightbox').classList.remove('hidden');
+        }
+
+        function cerrarLightbox() {
+            document.getElementById('lightbox').classList.add('hidden');
+        }
+
+        function descargarRecurso(tipo) {
+            const id = document.getElementById('participante-select').value;
+            if (!id) { alert("Seleccione un nombre."); return; }
+            
+            const persona = participantes.find(p => p.id === id);
+            let ruta = tipo === 'diploma' ? `diplomas/${persona.archivo}` : 'recursos/presentacion.pdf';
+            
+            const link = document.createElement('a');
+            link.href = ruta; 
+            link.download = ruta.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            if(tipo === 'diploma') confetti();
+        }
+    </script>
+</body>
+</html>
